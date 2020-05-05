@@ -2,8 +2,10 @@
     "use strict";
 
     // Check if Mobile or Desktop
-    var heightCoeff = 0.33;
+    var heightCoeff = 0.25;
+    var onMobile = false;
     if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+        onMobile = true;
         heightCoeff = 0.66;
     }
 
@@ -39,6 +41,12 @@
 
         // Parse data
         var dataframe = createSources(data);
+
+        // additional 
+        dataframe.forEach(function(datum){
+            var diff = datum['surplus'] - datum['generations_fund'];
+            datum['surplus_diff'] = (diff > 0) ? diff : 0.0;
+        });
 
         // -----------------------------------------------------------------------
         // ------------------------ Objects Creation -----------------------------
@@ -109,7 +117,7 @@
             "surplus":{
                 "name":"Surplus",
                 "color":"#266e73",
-                "area": false
+                "area": true
             },
             "stabilization_reserve":{
                 "name":"Stabilization Reserve",
@@ -120,6 +128,11 @@
             "generations_fund":{
                 "name":"Generations Fund",
                 "color":"#60c85b",
+                "area": true
+            },
+            "surplus_diff":{
+                "name":"Surplus Difference",
+                "color":"#db94d4",
                 "area": true
             }
         }
@@ -219,23 +232,71 @@
             });
         }
 
+        // -----------------------------------------------------------------------
+        // ----------------------------- Scrolling ---------------------------------
+        // -----------------------------------------------------------------------
+
+        // left: 37, up: 38, right: 39, down: 40,
+        // spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
+        var keys = {37: 1, 38: 1, 39: 1, 40: 1};
+
+        function preventDefault(e) {
+            e.preventDefault();
+        }
+
+        function preventDefaultForScrollKeys(e) {
+            if (keys[e.keyCode]) {
+                preventDefault(e);
+                return false;
+            }
+        }
+
+        // modern Chrome requires { passive: false } when adding event
+        var supportsPassive = false;
+        try {
+            window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+                get: function () { supportsPassive = true; } 
+            }));
+        } catch(e) {}
+
+        var wheelOpt = supportsPassive ? { passive: false } : false;
+        var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+
+        // call this to Disable
+        function disableScroll() {
+            window.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
+            window.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
+            window.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
+            window.addEventListener('keydown', preventDefaultForScrollKeys, false);
+        }
+
+        // call this to Enable
+        function enableScroll() {
+            window.removeEventListener('DOMMouseScroll', preventDefault, false);
+            window.removeEventListener(wheelEvent, preventDefault, wheelOpt); 
+            window.removeEventListener('touchmove', preventDefault, wheelOpt);
+            window.removeEventListener('keydown', preventDefaultForScrollKeys, false);
+        }
+
 
         // -----------------------------------------------------------------------
         // ----------------------------- Animate ---------------------------------
         // -----------------------------------------------------------------------
 
-
         var action1 = function(){
             hideAll(g);
+            brushUpdate(0,0);
         }
 
         var action2 = function(){
             hideAll(g);
+            brushUpdate(0,minmaxY[1]);
             displayLine(g, "gdp", colors);
         }
 
         var action3 = function(){
             hideAll(g);
+            brushUpdate(0,minmaxY[1]);
             displayLine(g, "gdp", colors);
             displayLine(g, "gross_debt", colors);
         }
@@ -257,34 +318,49 @@
 
         var action6 = function(){
             hideAll(g);
-            displayLine(g, "gdp", colors);
-            displayLine(g, "gross_debt", colors);
-            brushUpdate(0,200000);
             displayLine(g, "surplus", colors);
             brushUpdate(0,14000);
         }
 
         var action7 = function(){
             hideAll(g);
-            displayLine(g, "gdp", colors);
-            displayLine(g, "gross_debt", colors);
-            brushUpdate(0,200000);
+            displayLine(g, "generations_fund", colors);
             displayLine(g, "surplus", colors);
             brushUpdate(0,14000);
-            displayLine(g, "generations_fund", colors);
         }
 
-        var texts = [text1, text2, text3, text4, text5, text6, text7];
+
+        var action8 = function(){
+            hideAll(g);
+            // displayLine(g, "generations_fund", colors);
+            // displayLine(g, "surplus", colors);
+            displayLine(g, "surplus_diff", colors);
+            brushUpdate(0,14000);
+        }
+
+        
+
+        var texts = [text1, text2, text3, text4, text5, text6, text7, text8];
+        var actions = [action1,action2,action3,action4,action5,action6,action7,action8];
+
         var nodes = [];
-        var actions = [action1,action2,action3,action4,action5,action6,action7];
+
+
+        var divNode = document.createElement("div");
+        divNode.style.paddingBottom = "512px";
+        textDiv.node().appendChild(divNode);
+
         texts.forEach(function(text){
 
             // create node
             var pNode = document.createElement("p");
             pNode.innerHTML = text;
+            pNode.style.opacity = "0.0";
+            pNode.style.paddingLeft = "32px";
+            pNode.style.paddingRight = "32px";
 
             var divNode = document.createElement("div");
-            divNode.style.paddingBottom = "128px";
+            divNode.style.paddingBottom = "512px";
 
             // add to array
             nodes.push(pNode);
@@ -294,22 +370,66 @@
             textDiv.node().appendChild(divNode);
         });
 
-        var lastViewed = -1;
-        textDiv.node().onscroll = function(){
+
+        var divNode = document.createElement("div");
+        divNode.style.paddingBottom = "512px";
+        textDiv.node().appendChild(divNode);
+
+
+        function hideAllpNodes(){
             for(var i=0 ; i<nodes.length ; i++){
-                if(isScrolledIntoView(textDiv.node(),nodes[i])){
-                    if(lastViewed != i){
-                        lastViewed = i;
-                        console.log(i)
-                        actions[i].call(this);
+                nodes[i].style.opacity = "0.0";
+            }
+        }     
+
+        var lastViewed = -1;
+        function showPNode(nodeIndex){
+
+            if(!onMobile){
+                
+                textDiv.node().style.overflowY = 'hidden';
+                textDiv.node().scrollTo(0,nodes[nodeIndex].offsetTop);
+                setTimeout(function() {
+                    textDiv.node().style.overflowY = 'scroll';
+                }, 1000);
+                // disableScroll();
+                // setTimeout(enableScroll,2000);
+            }
+            
+            // show node
+            lastViewed = nodeIndex;
+            hideAllpNodes();
+            unfade(nodes[nodeIndex]);
+
+            // graph update
+            actions[nodeIndex].call(this);
+        }
+
+        textDiv.node().onscroll = function(){
+
+            var nodesInView = {};
+            for(var i=0 ; i<nodes.length ; i++){
+                nodesInView[i] = isScrolledIntoView(textDiv.node(),nodes[i]);
+            }
+
+            if(lastViewed == -1 || nodesInView[lastViewed] == false){
+                for(var i=0 ; i<nodes.length ; i++){
+                    if(nodesInView[i]){
+                        showPNode(i);
+                        break;
                     }
-                    break;
                 }
             }
         }
-        
+
+        // hide all
+        hideAll(g);
+        textDiv.node().scrollTo(0,512);
+        showPNode(0);
+
     });
 })(d3);
+
 
 
 function fade(element) {
@@ -338,21 +458,27 @@ function unfade(element) {
     }, 10);
 }
 
-
 function isScrolledIntoView(parent, child) {
 
     // Where is the parent on page
     var parentRect = parent.getBoundingClientRect();
     // What can you see?
     var parentViewableArea = {
+        top: parentRect.top,
+        bottom: parentRect.bottom,
         height: parent.clientHeight,
         width: parent.clientWidth
     };
 
     // Where is the child
     var childRect = child.getBoundingClientRect();
-    // Is the child viewable?
-    var isViewable = (childRect.top >= parentRect.top) && (childRect.top <= parentRect.top + parentViewableArea.height);
 
-    return isViewable;
+    // is viewable?
+    if(childRect.bottom < parentViewableArea.top){
+        return false;
+    }else if(childRect.top > parentViewableArea.bottom){
+        return false;
+    }else{
+        return true;
+    }
 }

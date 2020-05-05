@@ -51,6 +51,6 @@ function drawLine(g, dataframe, colors, key, lineObj, areaObj){
             .attr("d", line)
             .attr("fill","none")
             .attr("stroke",color)
-            .attr("stroke-width","4px");
+            .attr("stroke-width","2px");
     }
 }

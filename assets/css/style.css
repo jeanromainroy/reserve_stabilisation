@@ -64,7 +64,15 @@ h1 {
     text-align: justify;
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollhid::-webkit-scrollbar {
+    display: none;
+}
 
+/* Hide scrollbar for IE and Edge */
+.scrollhid {
+    -ms-overflow-style: none;
+} 
 
 
 /***** Main Panel *****/
