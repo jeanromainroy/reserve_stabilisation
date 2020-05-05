@@ -1,22 +1,28 @@
 (function (d3) {
     "use strict";
 
+    // Check if Mobile or Desktop
+    var heightCoeff = 0.33;
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+        heightCoeff = 0.66;
+    }
+
     // Get Parent Div
     //var mainBox = d3.select("#main-box");
     var dataviz = d3.select("#first_fig");
-    var textBox = d3.select("#text-box");
+    var textDiv = d3.select("#text-div");
   
     // Main Graph
 	var margin = {
 		top: 32,
-		right: 72,
+		right: 128,
 		bottom: 96,
-		left: 72
+		left: 128
 	};
-	//var width = mainBox.node()['clientWidth'] - margin.left - margin.right;
-    //var height = mainBox.node()['clientHeight'] - margin.top - margin.bottom;
-	var width = 1300 - margin.left - margin.right;
-    var height = 500 - margin.top - margin.bottom;
+    var width = d3.select("body").node()['clientWidth'] - margin.left - margin.right;
+    var height = Math.round(width*heightCoeff) - margin.top - margin.bottom;
+    var textDivTop = height + margin.top + margin.bottom + 32 + 32 + 48;
+    textDiv.style("top",textDivTop + "px")
 
     // Requests
     var promises = [];
@@ -55,7 +61,7 @@
 
         var yAxisLabel = svg.append("text")
             .attr("class","y-label")
-            .attr("transform", "translate(" + 12 + "," + (height/2.0 + margin.top) + ")rotate(-90)")
+            .attr("transform", "translate(" + 48 + "," + (height/2.0 + margin.top) + ")rotate(-90)")
             .text("");
 
         // set the labels
@@ -218,140 +224,89 @@
         // ----------------------------- Animate ---------------------------------
         // -----------------------------------------------------------------------
 
-        // 1. Start by hiding all the curves
-        hideAll(g);
-        textBox.style("display","none");
-        fade(textBox.node());
 
-        // 2. Intro text
-        setTimeout(function(){
-            
-            textBox.node().innerHTML = text1;
+        var action1 = function(){
+            hideAll(g);
+        }
 
-            unfade(textBox.node())
-
-        },1500);
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },6000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text2;
-
-            unfade(textBox.node());
-
+        var action2 = function(){
+            hideAll(g);
             displayLine(g, "gdp", colors);
+        }
 
-        },8000);
-
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },12000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text3;
-
-            unfade(textBox.node());
-
+        var action3 = function(){
+            hideAll(g);
+            displayLine(g, "gdp", colors);
             displayLine(g, "gross_debt", colors);
+        }
 
-        },14000);
-
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },20000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text4;
-
-            unfade(textBox.node());
-
+        var action4 = function(){
+            hideAll(g);
+            displayLine(g, "gdp", colors);
+            displayLine(g, "gross_debt", colors);
             brushUpdate(0,200000);
+        }
 
-        },22000);
-
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },32000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text5;
-
-            unfade(textBox.node());
-
+        var action5 = function(){
+            hideAll(g);
+            displayLine(g, "gdp", colors);
+            displayLine(g, "gross_debt", colors);
+            brushUpdate(0,200000);
             displayLine(g, "surplus", colors);
+        }
 
-        },34000);
-
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },38000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text6;
-
-            unfade(textBox.node());
-
+        var action6 = function(){
+            hideAll(g);
+            displayLine(g, "gdp", colors);
+            displayLine(g, "gross_debt", colors);
+            brushUpdate(0,200000);
+            displayLine(g, "surplus", colors);
             brushUpdate(0,14000);
+        }
 
-        },40000);
-
-
-        // 3. Hide text
-        setTimeout(function(){
-
-            fade(textBox.node());
-
-        },44000);
-
-
-        // 4. Draw Text
-        setTimeout(function(){
-
-            textBox.node().innerHTML = text7;
-
-            unfade(textBox.node());
-
+        var action7 = function(){
+            hideAll(g);
+            displayLine(g, "gdp", colors);
+            displayLine(g, "gross_debt", colors);
+            brushUpdate(0,200000);
+            displayLine(g, "surplus", colors);
+            brushUpdate(0,14000);
             displayLine(g, "generations_fund", colors);
+        }
 
-        },46000);
+        var texts = [text1, text2, text3, text4, text5, text6, text7];
+        var nodes = [];
+        var actions = [action1,action2,action3,action4,action5,action6,action7];
+        texts.forEach(function(text){
 
+            // create node
+            var pNode = document.createElement("p");
+            pNode.innerHTML = text;
 
+            var divNode = document.createElement("div");
+            divNode.style.paddingBottom = "128px";
+
+            // add to array
+            nodes.push(pNode);
+
+            // Add to parent node
+            textDiv.node().appendChild(pNode);
+            textDiv.node().appendChild(divNode);
+        });
+
+        var lastViewed = -1;
+        textDiv.node().onscroll = function(){
+            for(var i=0 ; i<nodes.length ; i++){
+                if(isScrolledIntoView(textDiv.node(),nodes[i])){
+                    if(lastViewed != i){
+                        lastViewed = i;
+                        console.log(i)
+                        actions[i].call(this);
+                    }
+                    break;
+                }
+            }
+        }
         
     });
 })(d3);
@@ -381,4 +336,23 @@ function unfade(element) {
         element.style.filter = 'alpha(opacity=' + op * 100 + ")";
         op += op * 0.1;
     }, 10);
+}
+
+
+function isScrolledIntoView(parent, child) {
+
+    // Where is the parent on page
+    var parentRect = parent.getBoundingClientRect();
+    // What can you see?
+    var parentViewableArea = {
+        height: parent.clientHeight,
+        width: parent.clientWidth
+    };
+
+    // Where is the child
+    var childRect = child.getBoundingClientRect();
+    // Is the child viewable?
+    var isViewable = (childRect.top >= parentRect.top) && (childRect.top <= parentRect.top + parentViewableArea.height);
+
+    return isViewable;
 }
