@@ -233,53 +233,6 @@
         }
 
         // -----------------------------------------------------------------------
-        // ----------------------------- Scrolling ---------------------------------
-        // -----------------------------------------------------------------------
-
-        // left: 37, up: 38, right: 39, down: 40,
-        // spacebar: 32, pageup: 33, pagedown: 34, end: 35, home: 36
-        var keys = {37: 1, 38: 1, 39: 1, 40: 1};
-
-        function preventDefault(e) {
-            e.preventDefault();
-        }
-
-        function preventDefaultForScrollKeys(e) {
-            if (keys[e.keyCode]) {
-                preventDefault(e);
-                return false;
-            }
-        }
-
-        // modern Chrome requires { passive: false } when adding event
-        var supportsPassive = false;
-        try {
-            window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-                get: function () { supportsPassive = true; } 
-            }));
-        } catch(e) {}
-
-        var wheelOpt = supportsPassive ? { passive: false } : false;
-        var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
-
-        // call this to Disable
-        function disableScroll() {
-            window.addEventListener('DOMMouseScroll', preventDefault, false); // older FF
-            window.addEventListener(wheelEvent, preventDefault, wheelOpt); // modern desktop
-            window.addEventListener('touchmove', preventDefault, wheelOpt); // mobile
-            window.addEventListener('keydown', preventDefaultForScrollKeys, false);
-        }
-
-        // call this to Enable
-        function enableScroll() {
-            window.removeEventListener('DOMMouseScroll', preventDefault, false);
-            window.removeEventListener(wheelEvent, preventDefault, wheelOpt); 
-            window.removeEventListener('touchmove', preventDefault, wheelOpt);
-            window.removeEventListener('keydown', preventDefaultForScrollKeys, false);
-        }
-
-
-        // -----------------------------------------------------------------------
         // ----------------------------- Animate ---------------------------------
         // -----------------------------------------------------------------------
 
@@ -332,49 +285,39 @@
 
         var action8 = function(){
             hideAll(g);
-            // displayLine(g, "generations_fund", colors);
-            // displayLine(g, "surplus", colors);
+            displayLine(g, "generations_fund", colors);
+            displayLine(g, "surplus", colors);
             displayLine(g, "surplus_diff", colors);
             brushUpdate(0,14000);
         }
 
-        
-
         var texts = [text1, text2, text3, text4, text5, text6, text7, text8];
         var actions = [action1,action2,action3,action4,action5,action6,action7,action8];
+        var divHeight = textDiv.node().clientHeight;
 
         var nodes = [];
 
-
-        var divNode = document.createElement("div");
-        divNode.style.paddingBottom = "512px";
-        textDiv.node().appendChild(divNode);
-
-        texts.forEach(function(text){
+        for(var i=0 ; i<texts.length ; i++){
 
             // create node
             var pNode = document.createElement("p");
-            pNode.innerHTML = text;
+            pNode.innerHTML = texts[i];
             pNode.style.opacity = "0.0";
             pNode.style.paddingLeft = "32px";
             pNode.style.paddingRight = "32px";
-
-            var divNode = document.createElement("div");
-            divNode.style.paddingBottom = "512px";
 
             // add to array
             nodes.push(pNode);
 
             // Add to parent node
             textDiv.node().appendChild(pNode);
-            textDiv.node().appendChild(divNode);
-        });
 
-
-        var divNode = document.createElement("div");
-        divNode.style.paddingBottom = "512px";
-        textDiv.node().appendChild(divNode);
-
+            if(i < texts.length - 1){
+                var divNode = document.createElement("div");
+                divNode.style.paddingBottom = (divHeight + 32) + "px";
+                textDiv.node().appendChild(divNode);
+            }
+        };
 
         function hideAllpNodes(){
             for(var i=0 ; i<nodes.length ; i++){
@@ -384,17 +327,6 @@
 
         var lastViewed = -1;
         function showPNode(nodeIndex){
-
-            if(!onMobile){
-                
-                textDiv.node().style.overflowY = 'hidden';
-                textDiv.node().scrollTo(0,nodes[nodeIndex].offsetTop);
-                setTimeout(function() {
-                    textDiv.node().style.overflowY = 'scroll';
-                }, 1000);
-                // disableScroll();
-                // setTimeout(enableScroll,2000);
-            }
             
             // show node
             lastViewed = nodeIndex;
@@ -424,7 +356,7 @@
 
         // hide all
         hideAll(g);
-        textDiv.node().scrollTo(0,512);
+        textDiv.node().scrollTo(0,0);
         showPNode(0);
 
     });
